@@ -16,16 +16,34 @@ STOP_CODONS = ["TAA", "TAG", "TGA"]
 
 @dataclass
 class Orf:
+    '''
+    A class representing an open reading frame (ORF).
+    
+    Attributes:
+    - start: an integer representing the start position of the ORF
+    - end: an integer representing the end position of the ORF
+    - protein_sequence: a string representing the protein sequence translated from the ORF
+    '''
     start: int
     end: int
     protein_sequence: str
 
 @dataclass
 class Annotation:
+    '''
+    A class representing an annotation of an ORF from a GTF file.
+    
+    Attributes:
+    - start: an integer representing the start position of the annotated ORF
+    - end: an integer representing the end position of the annotated ORF
+    - strand: a string representing the strand of the annotated ORF
+    - gene_id: a string representing the gene ID of the annotated ORF
+    '''
     start: int
     end: int
     strand: str
     gene_id: str
+
 
 def find_orfs(sequence: Seq, start_codon: str = START_CODON, stop_codons: list[str] = STOP_CODONS) -> list[Orf]:
     '''
@@ -37,7 +55,7 @@ def find_orfs(sequence: Seq, start_codon: str = START_CODON, stop_codons: list[s
     - stop_codons: a list of strings representing the stop codons (default: ["TAA", "TAG", "TGA"])
 
     Returns:
-    - a list of tuples (start, end, protein_sequence) representing the ORFs found in the sequence
+    - a list of Orf objects representing the ORFs found in the sequence
     '''
     orfs = []
     for frame in range(3):
@@ -163,7 +181,7 @@ def get_orfs(sequence: Seq) -> list[Orf]:
     - sequence: a Bio.Seq object representing the sequence
     
     Returns:
-    - a list of tuples (start, end, protein_sequence) representing the ORFs found in the sequence and its reverse complement
+    - a list of Orf objects representing the ORFs found in the sequence
     '''
     return find_orfs(sequence) + find_orfs(sequence.reverse_complement())
 
@@ -189,7 +207,7 @@ def get_annotations(gtf_filename: str) -> list[Annotation]:
     
     
     Returns:
-    - a list of tuples (start, end, strand, gene_id) representing the annotations found in the GTF file
+    - a list of Annotation objects representing the annotations found in the GTF file
     '''
     annotations = []
     with open(gtf_filename) as gtf_file:
@@ -205,8 +223,8 @@ def get_overlap(orf: Orf, annotation: Annotation) -> float:
     Calculate the percentage of overlap between an annotated ORF and an ORF found in the sequence.
     
     Args:
-    - orf: a tuple (start, end, protein_sequence) representing the ORF found in the sequence
-    - annotation: a tuple (start, end, strand, gene_id) representing the annotated ORF
+    - orf: an Orf object representing the ORF found in the sequence
+    - annotation: an Annotation object representing the annotated ORF
     
     Returns:
     - a float representing the percentage of overlap between the two ORFs
@@ -222,10 +240,11 @@ def get_best_overlap(annotation: Annotation, orfs: list[Orf]) -> tuple[Orf, floa
     Get the best overlap for a given annotation.
     
     Args:
-    - annotation: a tuple (start, end, strand, gene_id) representing the annotated ORF
+    - annotation: an Annotation object representing the annotated ORF
+    - orfs: a list of Orf objects representing the ORFs found in the sequence
     
     Returns:
-    - a tuple ((start, end, protein_sequence), overlap) representing the ORF with the best overlap and the percentage of the overlap
+    - a tuple of an Orf object representing the best ORF overlap for the annotation and a float representing the percentage of overlap
     '''
     best_orf = None
     best_overlap = 0
@@ -241,11 +260,12 @@ def find_overlaps(annotations: list[Annotation], orfs: list[Orf]) -> dict[str, t
     Find the best ORF overlap for each annotation.
     
     Args:
-    - annotations: a list of tuples (start, end, strand, gene_id) representing the annotations found in the GTF file
-    - orfs: a list of tuples (start, end, protein_sequence) representing the ORFs found in the sequence
+    - annotations: a list of Annotation objects representing the annotations found in the GTF file
+    - orfs: a list of Orf objects representing the ORFs found in the sequence
     
     Returns:
-    - a dictionary with keys representing annotations by ids and values representing the best ORF overlap for each annotation'''
+    - a dictionary with keys representing annotations by ids and values representing the best ORF overlap for each annotation
+    '''
     return {annotation.gene_id: get_best_overlap(annotation, orfs) for annotation in annotations}
 
 def print_overlaps(overlaps: dict[str, tuple[Orf, float]]) -> None:
