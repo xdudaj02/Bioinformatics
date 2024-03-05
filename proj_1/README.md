@@ -32,6 +32,7 @@ Example output:
 5. Number of Stop Codons (UAA, UAG, UGA): 560
 6. Most frequent codon(s): TTT  Least frequent codon(s): CGC
 
+9. Overlaps with the annotated ORFs:
 NM_001180043.1  37.85%
 NM_001184582.1  100.00%
 NM_001178208.1  16.34%

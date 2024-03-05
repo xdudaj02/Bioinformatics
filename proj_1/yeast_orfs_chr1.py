@@ -118,6 +118,7 @@ def find_overlaps(annotations: list[tuple[int, int, str, str]], orfs: list[tuple
 
 # Print overlaps
 def print_overlaps(overlaps: list[tuple[tuple[int, int, str, str], tuple[int, int, str], float]]):
+    print("9. Overlaps with the annotated ORFs:")
     for annotation, orf, overlap in overlaps:
         if orf:
             print(f"{annotation[3]}\t{overlap:.2f}%")
