@@ -5,7 +5,7 @@ Python script for the first group assignment for the Bioinformatics cours at FCU
 - Jakub Duda (202311235)
 
 ## Usage
-Script is written in *Python 3.11.0* and requires the *Biopython* library to be installed.
+Script is written in *Python* and does not require any non-standard libraries.
 
 To run the script, use the following command:
 ```bash
@@ -32,18 +32,19 @@ Example output:
 6. Most frequent codon(s): TTT  Least frequent codon(s): CGC
 
 9. Overlaps with the annotated ORFs:
-NM_001180043.1  37.85%
+NM_001180043.1  100.00%
 NM_001184582.1  100.00%
-NM_001178208.1  16.34%
-NM_001179897.1  28.76%
+NM_001178208.1  100.00%
+NM_001179897.1  100.00%
 NM_001180042.1  100.00%
-NM_001180041.1  44.74%
+NM_001180041.1  100.00%
 NM_001178206.2  100.00%
 NM_001184642.1  100.00%
+NM_001178205.1  100.00%
 ```
 
 #### Output files
-The file `all_potential_proteins.txt` contains all the potential proteins found in the sequence printed on separate lines. Each line contains one protein sequence. Stop codons are represented by `*`.
+The file `all_potential_proteins.txt` contains all the potential proteins found in the sequence printed on separate lines. Each line contains one protein sequence. Stop codons are not included in the sequences.ex
 
 The file `orf_coordinates.txt` contains all the ORFs found in the sequence printed on separate lines. Each line contains one ORF and has the following format:
 `Start_X, End_X, ORFX`, where **X** represents the index of the ORF and **Start_X** and **End_X** are the start and end coordinates of this **X**-th ORF.
