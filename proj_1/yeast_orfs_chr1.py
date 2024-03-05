@@ -1,4 +1,8 @@
-# TODO: add description, authors, date, etc.
+# File: yeast_orfs_chr1.py
+# Author: Jakub Duda (202311235)
+# Date: 5. 3. 2024
+# Description: This script reads a genomic sequence from a FASTA file and a GTF file with annotations. It then calculates various statistics about the sequence, including its length, frequency of each base, GC content, number of start and stop codons, and the most and least frequent codons. Then it finds all open reading frames (ORFs) in the sequence and writes them to a file, along with their coordinates. It also finds all potential proteins and writes them to a file. Finally, it finds the percentage of the biggest overlap between each annotated ORF and any of the ORFs found in the sequence and prints the results.
+
 import sys
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -93,7 +97,7 @@ def get_annotations(gtf_filename: str) -> list[tuple[int, int, str]]:
 
 # Calculate overlap between an ORF and an annotation
 def get_overlap(orf: tuple[int, int, str], annotation: tuple[int, int, str, str]) -> float:
-    orf_start, orf_end, orf_seq = orf
+    orf_start, orf_end, _ = orf
     annot_start, annot_end, *_ = annotation
     if orf_start > annot_end or orf_end < annot_start:
         return 0
