@@ -3,7 +3,6 @@ Python script for the first group assignment for the Bioinformatics cours at FCU
 
 ## Authors
 - Jakub Duda (202311235)
-- TODO
 
 ## Usage
 Script is written in *Python 3.11.0* and requires the *Biopython* library to be installed.

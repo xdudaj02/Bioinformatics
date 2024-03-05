@@ -5,6 +5,7 @@
 # Usage: python yeast_orfs_chr1.py <file_name_1.fasta> <file_name_2.gtf>
 
 import sys
+from dataclasses import dataclass
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -13,7 +14,20 @@ from Bio.SeqUtils import nt_search
 START_CODON = "ATG"
 STOP_CODONS = ["TAA", "TAG", "TGA"]
 
-def find_orfs(sequence: Seq, start_codon: str = START_CODON, stop_codons: list[str] = STOP_CODONS) -> list[tuple[int, int, str]]:
+@dataclass
+class Orf:
+    start: int
+    end: int
+    protein_sequence: str
+
+@dataclass
+class Annotation:
+    start: int
+    end: int
+    strand: str
+    gene_id: str
+
+def find_orfs(sequence: Seq, start_codon: str = START_CODON, stop_codons: list[str] = STOP_CODONS) -> list[Orf]:
     '''
     Find all open reading frames (ORFs) in a sequence and return them as a list of tuples (start, end, protein_sequence).
     
@@ -37,7 +51,7 @@ def find_orfs(sequence: Seq, start_codon: str = START_CODON, stop_codons: list[s
                     break
             if end:
                 orf_sequence = frame_sequence[start : end]
-                orfs.append((start + frame, end + frame, str(orf_sequence.translate())))
+                orfs.append(Orf(start + frame, end + frame, str(orf_sequence.translate())))
     return orfs
 
 def get_genomic_sequence(fasta_filename: str, limit: int = 30_000) -> Seq:
@@ -141,7 +155,7 @@ def print_statistics(sequence: Seq, codon_counts: dict[str, int]) -> None:
     print(f"6. Most frequent codon(s): {', '.join(extremal_codons(codon_counts, max))} ",
              f"Least frequent codon(s): {', '.join(extremal_codons(codon_counts, min))}")
 
-def get_orfs(sequence: Seq) -> list[tuple[int, int, str]]:
+def get_orfs(sequence: Seq) -> list[Orf]:
     '''
     Find all open reading frames (ORFs) in a sequence and its reverse complement and return them as a list of tuples (start, end, protein_sequence).
     
@@ -153,7 +167,7 @@ def get_orfs(sequence: Seq) -> list[tuple[int, int, str]]:
     '''
     return find_orfs(sequence) + find_orfs(sequence.reverse_complement())
 
-def output_to_files(orfs: list[tuple[int, int, str]]):
+def output_to_files(orfs: list[Orf]) -> None:
     '''
     Write ORF information to files.
     
@@ -162,11 +176,11 @@ def output_to_files(orfs: list[tuple[int, int, str]]):
     '''
     with open("all_potential_proteins.txt", "w") as protein_file, \
             open("orf_coordinates.txt", "w") as coordinates_file:
-        for i, (start, end, orf) in enumerate(orfs, start=1):
-            protein_file.write(f"{orf}\n")
-            coordinates_file.write(f"{start}, {end}, ORF{i}\n")
+        for i, orf in enumerate(orfs, start=1):
+            protein_file.write(f"{orf.protein_sequence}\n")
+            coordinates_file.write(f"{orf.start}, {orf.end}, ORF{i}\n")
 
-def get_annotations(gtf_filename: str) -> list[tuple[int, int, str]]:
+def get_annotations(gtf_filename: str) -> list[Annotation]:
     '''
     Get annotations from a GTF file and return them as a list of tuples (start, end, strand, gene_id).
     
@@ -183,10 +197,10 @@ def get_annotations(gtf_filename: str) -> list[tuple[int, int, str]]:
             if not line.startswith("#"):
                 fields = line.strip().split("\t")
                 if fields[2] == "exon":
-                    annotations.append((int(fields[3]), int(fields[4]), fields[6], fields[8].split("\"")[1]))
+                    annotations.append(Annotation(int(fields[3]), int(fields[4]), fields[6], fields[8].split("\"")[1]))
     return annotations
 
-def get_overlap(orf: tuple[int, int, str], annotation: tuple[int, int, str, str]) -> float:
+def get_overlap(orf: Orf, annotation: Annotation) -> float:
     '''
     Calculate the percentage of overlap between an annotated ORF and an ORF found in the sequence.
     
@@ -197,15 +211,13 @@ def get_overlap(orf: tuple[int, int, str], annotation: tuple[int, int, str, str]
     Returns:
     - a float representing the percentage of overlap between the two ORFs
     '''
-    orf_start, orf_end, _ = orf
-    annot_start, annot_end, *_ = annotation
-    if orf_start > annot_end or orf_end < annot_start:
+    if orf.start > annotation.end or orf.end < annotation.start:
         return 0
-    overlap_start = max(orf_start, annot_start)
-    overlap_end = min(orf_end, annot_end)
-    return (overlap_end - overlap_start) / (annot_end - annot_start) * 100
+    overlap_start = max(orf.start, annotation.start)
+    overlap_end = min(orf.end, annotation.end)
+    return (overlap_end - overlap_start) / (annotation.end - annotation.start) * 100
 
-def get_best_overlap(annotation: tuple[int, int, str, str], orfs: list[tuple[int, int, str]]) -> tuple[tuple[int, int, str], float]:
+def get_best_overlap(annotation: Annotation, orfs: list[Orf]) -> tuple[Orf, float]:
     '''
     Get the best overlap for a given annotation.
     
@@ -224,7 +236,7 @@ def get_best_overlap(annotation: tuple[int, int, str, str], orfs: list[tuple[int
             best_orf = orf
     return (best_orf, best_overlap)
 
-def find_overlaps(annotations: list[tuple[int, int, str, str]], orfs: list[tuple[int, int, str]]) -> dict[str, tuple[tuple[int, int, str], float]]:
+def find_overlaps(annotations: list[Annotation], orfs: list[Orf]) -> dict[str, tuple[Orf, float]]:
     '''
     Find the best ORF overlap for each annotation.
     
@@ -234,9 +246,9 @@ def find_overlaps(annotations: list[tuple[int, int, str, str]], orfs: list[tuple
     
     Returns:
     - a dictionary with keys representing annotations by ids and values representing the best ORF overlap for each annotation'''
-    return {annotation[3]: get_best_overlap(annotation, orfs) for annotation in annotations}
+    return {annotation.gene_id: get_best_overlap(annotation, orfs) for annotation in annotations}
 
-def print_overlaps(overlaps: dict[str, tuple[tuple[int, int, str], float]]):
+def print_overlaps(overlaps: dict[str, tuple[Orf, float]]) -> None:
     '''
     Print overlaps between the annotated ORFs and the ORFs found in the sequence.
     
@@ -247,11 +259,11 @@ def print_overlaps(overlaps: dict[str, tuple[tuple[int, int, str], float]]):
     - None
     '''
     print("9. Overlaps with the annotated ORFs:")
-    for annotation, (orf, overlap) in overlaps.items():
+    for annotation_id, (orf, overlap) in overlaps.items():
         if orf:
-            print(f"{annotation}\t{overlap:.2f}%")
+            print(f"{annotation_id}\t{overlap:.2f}%")
         else:
-            print(f"{annotation}\tNo overlap")
+            print(f"{annotation_id}\tNo overlap")
 
 def parse_args() -> tuple[str, str]:
     '''
@@ -269,6 +281,7 @@ def parse_args() -> tuple[str, str]:
         raise SystemExit("The first file must be a FASTA file")
     if not sys.argv[2].endswith(".gtf"):
         raise SystemExit("The second file must be a GTF file")
+    
     return sys.argv[1], sys.argv[2]
 
 
