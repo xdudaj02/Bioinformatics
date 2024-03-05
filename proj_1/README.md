@@ -1,5 +1,5 @@
 # Bioinformatics - Group Assignment 1
-Python script for the first group assignment for the Bioinformatics cours at FCUP 23/24. Solves all the tasks listed in the assignment [a relative link](group_assignment_1.pdf). 
+Python script for the first group assignment for the Bioinformatics cours at FCUP 23/24. Solves all the tasks listed in the [assignment](group_assignment_1.pdf). 
 
 ## Authors
 - Jakub Duda (202311235)
