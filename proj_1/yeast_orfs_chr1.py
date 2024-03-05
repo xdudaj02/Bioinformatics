@@ -135,9 +135,14 @@ def parse_args() -> tuple[str, str]:
 # Run the script
 if __name__ == "__main__":
     fasta_filename, gtf_filename = parse_args()
+
     gen_seq = get_genomic_sequence(fasta_filename)
     cod_cnts = codon_counts(gen_seq)
+
     print_statistics(gen_seq, cod_cnts)
+
     orf_list = get_orfs(gen_seq)
+
+    print()
     output_to_files(orf_list)
     print_overlaps(find_overlaps(get_annotations(gtf_filename), orf_list))
