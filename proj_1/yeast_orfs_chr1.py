@@ -312,10 +312,13 @@ if __name__ == "__main__":
     gen_seq = get_genomic_sequence(fasta_filename)
     cod_cnts = codon_counts(gen_seq)
 
+    # tasks 1-6
     print_statistics(gen_seq, cod_cnts)
 
     orf_list = get_orfs(gen_seq)
 
     print()
+    # tasks 7-8
     output_to_files(orf_list)
+    # task 9
     print_overlaps(find_overlaps(get_annotations(gtf_filename), orf_list))
