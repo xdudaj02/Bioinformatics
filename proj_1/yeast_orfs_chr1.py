@@ -289,14 +289,20 @@ def get_annotations(gtf_filename: str) -> list[Annotation]:
     
     Returns:
     - a list of Annotation objects representing the annotations found in the GTF file
+
+    Raises:
+    - SystemExit: if the file does not exist
     '''
     annotations = []
-    with open(gtf_filename) as gtf_file:
-        for line in gtf_file:
-            if not line.startswith("#"):
-                fields = line.strip().split("\t")
-                if fields[2] == "exon":
-                    annotations.append(Annotation(int(fields[3]), int(fields[4]), fields[6], fields[8].split("\"")[1]))
+    try:
+        with open(gtf_filename) as gtf_file:
+            for line in gtf_file:
+                if not line.startswith("#"):
+                    fields = line.strip().split("\t")
+                    if fields[2] == "exon":
+                        annotations.append(Annotation(int(fields[3]), int(fields[4]), fields[6], fields[8].split("\"")[1]))
+    except FileNotFoundError:
+        raise SystemExit(f"The file {gtf_filename} does not exist.")
     return annotations
 
 def get_overlap(orf: Orf, annotation: Annotation) -> float:
