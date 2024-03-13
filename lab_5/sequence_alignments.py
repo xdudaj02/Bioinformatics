@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
 
-def create_submat (match, mismatch, alphabet):
-    """ substitution matrix as dictionary """
+def create_submat(match, mismatch, alphabet):
+    """substitution matrix as dictionary"""
     sm = {}
     for c1 in alphabet:
         for c2 in alphabet:
             if (c1 == c2):
-                sm[c1+c2] = match
+                sm[c1 + c2] = match
             else:
-                sm[c1+c2] = mismatch
+                sm[c1 + c2] = mismatch
     return sm
 
 # read substitution matrix from file
-def read_submat_file (filename):
-    """read substitution matrix from file """
+def read_submat_file(filename):
+    """read substitution matrix from file"""
     sm = {}
     f = open(filename, "r")
     line = f.readline()
@@ -23,37 +23,37 @@ def read_submat_file (filename):
     alphabet = []
     for i in range(0, ns): 
         alphabet.append(tokens[i][0])
-    for i in range(0,ns):
-        line = f.readline();
-        tokens = line.split("\t");
+    for i in range(0, ns):
+        line = f.readline()
+        tokens = line.split("\t")
         for j in range(0, len(tokens)):
-            k = alphabet[i]+alphabet[j]
+            k = alphabet[i] + alphabet[j]
             sm[k] = int(tokens[j])
     return sm
 
 # score of a position (column)
 def score_pos(c1, c2, sm, g):
     """score of a position (column)"""
-    if c1 == "-" or c2=="-":
+    if c1 == "-" or c2 == "-":
         return g
     else:
-        return sm[c1+c2]
+        return sm[c1 + c2]
 
 # score of the whole alignment
-def score_align (seq1, seq2, sm, g):
+def score_align(seq1, seq2, sm, g):
     """ score of the whole alignment; iterate through the two sequences
     sum the score of each position and return its sum; assume sequences are of equal length
-    
     """
-    res = 0;
-    # complete here ...
+    res = 0
+    for i in range(len(seq1)):
+        res += score_pos(seq1[i], seq2[i], sm, g)
     return res
 
-def score_affinegap (seq1, seq2, sm, g, r):
-    ''' calculates the score of alignment based on : affine_gap(len) = g + r*len
-    if the gap is open (first occurrence) sum value g; if gap continues sum r to each new gap position;
+def score_affinegap(seq1, seq2, sm, g, r):
+    """ calculates the score of alignment based on : affine_gap(len) = g + r * len
+    if the gap is open (first occurrence) sum value g; if gap continues sum r to each new gap position
     if there is no gap use the substitution matrix for the score.
-    '''
+    """
     res = 0
     ingap1 = False # two f are true when inside gap sequences
     ingap2 = False
@@ -81,7 +81,7 @@ def score_affinegap (seq1, seq2, sm, g, r):
 
 ## global alignment 
 
-def needleman_Wunsch (seq1, seq2, sm, g):
+def needleman_Wunsch(seq1, seq2, sm, g):
     """Global Alignment"""
     S = [[0]]
     T = [[0]]
@@ -96,23 +96,27 @@ def needleman_Wunsch (seq1, seq2, sm, g):
     # apply the recurrence to fill the matrices
     for i in range(0, len(seq1)):
         for j in range(len(seq2)):
-            s1 = S[i][j] + score_pos (seq1[i], seq2[j], sm, g); # diagonal
+            s1 = S[i][j] + score_pos(seq1[i], seq2[j], sm, g); # diagonal
             s2 = S[i][j+1] + g  # vertical
             s3 = S[i+1][j] + g # horizontal
             S[i+1].append(max(s1, s2, s3)) # na matrix score add max value
             T[i+1].append(max3t(s1, s2, s3))
     return (S, T)
 
-def max3t (v1, v2, v3):
+def max3t(v1, v2, v3):
     """Provides the integer to fill in T"""
     if v1 > v2:
-        if v1 > v3: return 1
-        else: return 3
+        if v1 > v3:
+            return 1
+        else:
+            return 3
     else:
-        if v2 > v3: return 2
-        else: return 3
+        if v2 > v3:
+            return 2
+        else: 
+            return 3
 
-def recover_align (T, seq1, seq2):
+def recover_align(T, seq1, seq2):
     # alignment are two strings
     res = ["", ""]
     i = len(seq1)
@@ -135,7 +139,7 @@ def recover_align (T, seq1, seq2):
 
 ## local alignment
 
-def smith_Waterman (seq1, seq2, sm, g):
+def smith_Waterman(seq1, seq2, sm, g):
     """Local alignment"""
     S = [[0]]
     T = [[0]]
@@ -150,7 +154,7 @@ def smith_Waterman (seq1, seq2, sm, g):
         T.append([0])
     for i in range(0, len(seq1)):
         for j in range(len(seq2)):
-            s1 = S[i][j] + score_pos (seq1[i], seq2[j], sm, g); 
+            s1 = S[i][j] + score_pos(seq1[i], seq2[j], sm, g); 
             s2 = S[i][j+1] + g
             s3 = S[i+1][j] + g
             b = max(s1, s2, s3)
@@ -162,26 +166,28 @@ def smith_Waterman (seq1, seq2, sm, g):
                 T[i+1].append(max3t(s1, s2, s3))
                 if b > maxscore: 
                     maxscore = b
+    print('smith', S, T)
     return (S, T, maxscore)
 
-def recover_align_local (S, T, seq1, seq2):
+def recover_align_local(S, T, seq1, seq2):
     """recover one of the optimal alignments"""
     res = ["", ""]
-    """determine the cell with max score"""
+    # determine the cell with max score
     i, j = max_mat(S)
-    """terminates when finds a cell with zero"""
-    while T[i][j]>0:
-        if T[i][j]==1:
-            res[0] = seq1[i-1] + res[0]
-            res[1] = seq2[j-1] + res[1]
+    # terminates when finds a cell with zero
+    print('t', T)
+    while T[i][j] > 0:
+        if T[i][j] == 1:
+            res[0] = seq1[i - 1] + res[0]
+            res[1] = seq2[j - 1] + res[1]
             i -= 1
             j -= 1
         elif T[i][j] == 3:
-            res[0] = "-" + res[0];
-            res[1] = seq2[j-1] + res[1] 
+            res[0] = "-" + res[0]
+            res[1] = seq2[j - 1] + res[1] 
             j -= 1
         elif T[i][j] == 2:
-            res[0] = seq1[i-1] + res[0]
+            res[0] = seq1[i - 1] + res[0]
             res[1] = "-" + res[1]
             i -= 1
     return res
@@ -191,16 +197,22 @@ def max_mat(mat):
     maxval = mat[0][0]
     maxrow = 0
     maxcol = 0
-    # returns the cell with maximum value
-    # complete here...
-    return (maxrow,maxcol)
+    for i in range(0, len(mat)):
+        for j in range(0, len(mat[i])):
+            if mat[i][j] > maxval:
+                maxval = mat[i][j]
+                maxrow = i
+                maxcol = j
+    print('maxmat', mat, maxrow, maxcol)
+    return (maxrow, maxcol)
 
 def identity(seq1, seq2, alphabet = "ACGT"):
-    '''calculate the identity score between seq1 and seq2 '''
-    # complete here ...
+    """calculate the identity score between seq1 and seq2"""
+    # use the needleman_wunsch algorithm to calculate the score of the alignment
+    return needleman_Wunsch(seq1, seq2, create_submat(1, -1, alphabet), 0)[0][-1, -1]
 
 
-def print_mat (mat):
+def print_mat(mat):
     for i in range(0, len(mat)):
         print(mat[i]) 
 
@@ -220,10 +232,12 @@ def test_prot():
     # plot the score of alignment using the subtitution matrix blosum62.mat
     # plot the score of alignment using affine gap score with gap value.
     # complete here ...
+
+
     pass
 
 def test_global_alig():
-    sm = read_submat_file("blosum62.mat") # create substitution matrix: sm = create_submat(match, mismatch, "ACGT")
+    sm = read_submat_file(r"data\blosum62.mat") # create substitution matrix: sm = create_submat(match, mismatch, "ACGT")
     seq1 = "PHSWG"      # seq1 de DNA
     seq2 = "HGWAG"      # seq2 de DNA
     res = needleman_Wunsch(seq1, seq2, sm, -2)   # 
@@ -237,7 +251,7 @@ def test_global_alig():
     print(alig[1])
 
 def test_local_alig():
-    sm = read_submat_file("blosum62.mat")
+    sm = read_submat_file(r"data\blosum62.mat")
     seq1 = "PHSWG"
     seq2 = "HGWAG"
     res = smith_Waterman(seq1, seq2, sm, -8)
@@ -251,7 +265,7 @@ def test_local_alig():
     print(alinL[1])
     i, j = max_mat(S)  # from Score matrix get the indices i,j from cell with max value
     best_score = S[i][j]  # best score of the alignment from cell i,j
-    print ("best score: " + str(best_score))
+    print("best score: " + str(best_score))
     
 
 def test_DNA_GlobalAlign():
@@ -270,13 +284,13 @@ def test_Prot_LocalAlign():
     # Test local alignment SW to sequences seq1 and seq2
     pass
 
-#test_DNA()
-#test_prot()
-#test_global_alig()
-#test_local_alig()
+test_DNA()
+test_prot()
+test_global_alig()
+test_local_alig()
 
 def exam_local_alig():
-    sm = create_submat(2, 0, "MCSNHL")
+    sm = create_submat(2, 0, "MDCSNHL")
     seq1 = "MCSNH"
     seq2 = "SDHL"
     res = smith_Waterman(seq1, seq2, sm, -2)
@@ -285,11 +299,11 @@ def exam_local_alig():
     print("Score of optimal alignment:", res[2])
     print_mat(S)
     print_mat(T)
-    alinL= recover_align_local(S, T, seq1, seq2)
-    print(alinL[0])
-    print(alinL[1])
+    alignL= recover_align_local(S, T, seq1, seq2)
+    print(alignL[0])
+    print(alignL[1])
     i, j = max_mat(S)  # from Score matrix get the indices i,j from cell with max value
     best_score = S[i][j]  # best score of the alignment from cell i,j
-    print ("best score: " + str(best_score))
+    print("best score: " + str(best_score))
 
 exam_local_alig()
