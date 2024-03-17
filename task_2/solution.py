@@ -17,8 +17,10 @@ def get_alignments(seq_1 : str = SEQ_1, seq_2 : str = SEQ_2, match : int = MATCH
     - mismatch (int): the score for a mismatch
     - gap (int): the score for a gap
     '''
+    alphabet = set(seq_1 + seq_2)
+
     # Determine the score and traceback matrix. Determine the best score.
-    sub_matrix = create_submat(match, mismatch)
+    sub_matrix = create_submat(match, mismatch, alphabet)
     global_score_matrix, global_traceback_matrix = needleman_Wunsch(seq_1, seq_2, sub_matrix, gap)
     global_best_score = global_score_matrix[-1][-1]
     local_score_matrix, local_traceback_matrix, local_best_score = smith_Waterman(seq_1, seq_2, sub_matrix, gap)
@@ -40,3 +42,7 @@ def get_alignments(seq_1 : str = SEQ_1, seq_2 : str = SEQ_2, match : int = MATCH
     # Explain if there are multiple best alignments
     # TODO: ???
     # not sure what to do here as it cant really be done with the provided functions and the solution would probably be too complex to fit on one page
+
+
+if __name__ == '__main__':
+    get_alignments()

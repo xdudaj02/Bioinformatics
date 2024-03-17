@@ -281,11 +281,6 @@ def test_Prot_LocalAlign():
     # Test local alignment SW to sequences seq1 and seq2
     pass
 
-test_DNA()
-test_prot()
-test_global_alig()
-test_local_alig()
-
 def exam_local_alig():
     sm = create_submat(2, 0, "MDCSNHL")
     seq1 = "MCSNH"
@@ -303,4 +298,10 @@ def exam_local_alig():
     best_score = S[i][j]  # best score of the alignment from cell i,j
     print("best score: " + str(best_score))
 
-exam_local_alig()
+if __name__ == '__main__':
+    test_DNA()
+    test_prot()
+    test_global_alig()
+    test_local_alig()
+
+    exam_local_alig()
