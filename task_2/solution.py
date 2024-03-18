@@ -1,4 +1,10 @@
-from sequence_alignments import *
+from sequence_alignments import (
+    create_submat,
+    needleman_wunsch,
+    smith_waterman,
+    recover_align,
+    recover_align_local,
+)
 
 SEQ_1 = 'TATTCG'
 SEQ_2 = 'ATTTCC'
@@ -6,7 +12,13 @@ MATCH = 2
 MISMATCH = -1
 GAP = -3
 
-def get_alignments(seq_1 : str = SEQ_1, seq_2 : str = SEQ_2, match : int = MATCH, mismatch : int = MISMATCH, gap : int = GAP):
+def get_alignments(
+    seq_1: str = SEQ_1,
+    seq_2: str = SEQ_2,
+    match: int = MATCH,
+    mismatch: int = MISMATCH,
+    gap: int = GAP,
+):
     '''
     Given two sequences and the match, mismatch, and gap scores, print all the relevant information about the global and local alignments.
 
@@ -19,29 +31,41 @@ def get_alignments(seq_1 : str = SEQ_1, seq_2 : str = SEQ_2, match : int = MATCH
     '''
     alphabet = set(seq_1 + seq_2)
 
-    # Determine the score and traceback matrix. Determine the best score.
-    sub_matrix = create_submat(match, mismatch, alphabet)
-    global_score_matrix, global_traceback_matrix = needleman_Wunsch(seq_1, seq_2, sub_matrix, gap)
-    global_best_score = global_score_matrix[-1][-1]
-    local_score_matrix, local_traceback_matrix, local_best_score = smith_Waterman(seq_1, seq_2, sub_matrix, gap)
-
-    print('Global score matrix:', global_score_matrix)
-    print('Global traceback matrix:', global_traceback_matrix)
-    print('Global alignment score:', global_best_score)
-    print('Local score matrix:', local_score_matrix)
-    print('Local traceback matrix:', local_traceback_matrix)
-    print('Local alignment score:', local_best_score)
+    # GLOBAL ALIGNMENT
+    # Determine the score and traceback matrix. 
+    sm = create_submat(match, mismatch, alphabet)
+    gsm, gtm = needleman_wunsch(seq_1, seq_2, sm, gap)
+    print('Global score matrix:', gsm)
+    print('Global traceback matrix:', gtm)
+    
+    # Determine the best score.
+    gbs = gsm[-1][-1]
+    print('Global alignment score:', gbs)
     
     # Retrieve the optimal sequence alignment.
-    optimal_global_alignment = recover_align(global_traceback_matrix, seq_1, seq_2)
-    optimal_local_alignment = recover_align_local(local_score_matrix, local_traceback_matrix, seq_1, seq_2)
+    oga = recover_align(gtm, seq_1, seq_2)
+    print('Optimal global alignment:', oga)
 
-    print('Optimal global alignment:', optimal_global_alignment)
-    print('Optimal local alignment:', optimal_local_alignment)
+    # Explain if there are multiple best alignments.
+    print('Multiple best global alignments:', 'Yes' if len(oga) > 1 else 'No')
+
+    print()
+
+    # LOCAL ALIGNMENT
+    # Determine the score and traceback matrix.
+    lsm, ltm, lbs = smith_waterman(seq_1, seq_2, sm, gap)
+    print('Local score matrix:', lsm)
+    print('Local traceback matrix:', ltm)
     
-    # Explain if there are multiple best alignments
-    # TODO: ???
-    # not sure what to do here as it cant really be done with the provided functions and the solution would probably be too complex to fit on one page
+    # Determine the best score.
+    print('Local alignment score:', lbs)
+    
+    # Retrieve the optimal sequence alignment.
+    ola = recover_align_local(lsm, ltm, seq_1, seq_2)
+    print('Optimal local alignment:', ola)
+    
+    # Explain if there are multiple best alignments.
+    print('Multiple best local alignments:', 'Yes' if len(ola) > 1 else 'No')
 
 
 if __name__ == '__main__':

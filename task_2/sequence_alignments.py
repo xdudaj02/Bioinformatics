@@ -21,7 +21,7 @@ def score_pos(c1, c2, sm, g):
 
 
 ## global alignment functions
-def needleman_Wunsch(seq1, seq2, sm, g):
+def needleman_wunsch(seq1, seq2, sm, g):
     '''Calculate the score and traceback matrices for the global alignment of seq1 and seq2.'''
     S = [[0]]
     T = [[0]]
@@ -40,10 +40,10 @@ def needleman_Wunsch(seq1, seq2, sm, g):
             s2 = S[i][j+1] + g  # vertical
             s3 = S[i+1][j] + g # horizontal
             S[i+1].append(max(s1, s2, s3)) # na matrix score add max value
-            T[i+1].append(max3t(s1, s2, s3))
+            T[i+1].append(max_3t(s1, s2, s3))
     return (S, T)
 
-def max3t(v1, v2, v3):
+def max_3t(v1, v2, v3):
     '''Get direction of traceback. Return 1 if v1 is the maximum, 2 if v2 is the maximum, 3 if v3 is the maximum, 4 if v1 and v2 are equal maxima, 5 if v1 and v3 are equal maxima, 6 if v2 and v3 are equal maxima, 7 if all three are equal maxima.'''
     if v1 > v2 and v1 > v3:
         return 1
@@ -91,7 +91,7 @@ def recover_align(T, seq1, seq2, nseq1="", nseq2=""):
         return opt_1 + opt_2 + opt_3
 
 ## local alignment functions
-def smith_Waterman(seq1, seq2, sm, g):
+def smith_waterman(seq1, seq2, sm, g):
     '''Calculate the score and traceback matrices for the local alignment of seq1 and seq2. Return the score matrix, the traceback matrix, and the best score.'''
     S = [[0]]
     T = [[0]]
@@ -115,7 +115,7 @@ def smith_Waterman(seq1, seq2, sm, g):
                 T[i+1].append(0)
             else:
                 S[i+1].append(b)
-                T[i+1].append(max3t(s1, s2, s3))
+                T[i+1].append(max_3t(s1, s2, s3))
                 if b > maxscore: 
                     maxscore = b
     return (S, T, maxscore)

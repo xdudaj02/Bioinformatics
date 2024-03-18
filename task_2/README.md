@@ -1,5 +1,5 @@
 # Bioinformatics - Individual Assignment 2
-Python code for the second individual assignment for the Bioinformatics cours at FCUP 23/24. Solves the third problem of the assignment.
+Solution to the second individual assignment for the Bioinformatics course at FCUP 23/24. The final report that was turned in is contained in the file [solution.pdf](solution.pdf). The code for the third part of the assignment is contained in the file [solution.py](solution.py).
 
 ## Usage
 Script requires the `sequence_alignments.py` file from the fifth lab of the course to be in the same directory.
@@ -9,7 +9,8 @@ The script will output the following information about the sequence alignment fo
 - The score matrix
 - The traceback matrix
 - The optimal alignment score
-- The optimal alignment
+- The optimal alignments
+- Whether there are multiple optimal alignments
 
 ## Issues
-The fourth tasks of the first and second problems can not be solved with functions from the provided file. Currently there is no solution for this.
+The code from the fifth lab was modified to take into account the possibility of multiple optimal alignments.
