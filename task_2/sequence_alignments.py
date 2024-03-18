@@ -22,7 +22,7 @@ def score_pos(c1, c2, sm, g):
 
 ## global alignment functions
 def needleman_Wunsch(seq1, seq2, sm, g):
-    '''Ccalculate the score and traceback matrices for the global alignment of seq1 and seq2.'''
+    '''Calculate the score and traceback matrices for the global alignment of seq1 and seq2.'''
     S = [[0]]
     T = [[0]]
     # initialize gaps in rows
