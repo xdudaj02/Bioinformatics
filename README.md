@@ -1,2 +1,2 @@
 # Bioinformatics
-This repository contains the code for solutions of labs of the course [Bioinformatics](https://sigarra.up.pt/fcup/en/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id=528105). Lectures, labs and assignments can be found in the [course website](https://moodle2324.up.pt/course/view.php?id=2006).
+This repository contains the code for solutions of labs, tasks and projects from the [Bioinformatics](https://sigarra.up.pt/fcup/en/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id=528105) course at FCUP in 23/24. Lectures, labs and assignments can be found in the [course website](https://moodle2324.up.pt/course/view.php?id=2006).
