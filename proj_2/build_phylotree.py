@@ -29,7 +29,10 @@ import requests
 import matplotlib.pyplot as plt
 from Bio.Blast import NCBIWWW
 from Bio import AlignIO, SeqIO, SearchIO, Phylo
-from Bio.Phylo.TreeConstruction import DistanceCalculator, DistanceTreeConstructor
+from Bio.Phylo.TreeConstruction import (
+    DistanceCalculator, DistanceTreeConstructor,
+    ParsimonyTreeConstructor, NNITreeSearcher, ParsimonyScorer
+)
 
 
 UNIPROT_OUT_FN = "sequence.fasta"
@@ -169,23 +172,39 @@ def perform_msa(
     response = requests.get(f'{url}/result/{job_id}/aln-{aln_data_format}', timeout=100)
     if not response.ok:
         raise ValueError('Failed to get MSA results')
+    # todo: replace the sequence ids with the organism names (maybe, not sure if allowed)
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(response.text)
 
 
 def _save_phylotree(tree: Phylo.BaseTree.Tree, out_format: str):
-    # todo: make sure the graphs look good
+    '''
+    Save the phylogenetic tree to a file.
+
+    Args:
+        tree (Phylo.BaseTree.Tree): Phylogenetic tree
+        out_format (str): Format of the phylogenetic tree
+            Accepted values: 'png', 'pdf', 'svg', 'txt'
+
+    Raises:
+        ValueError: If the output format is invalid
+    '''
     if out_format == 'txt':
         with open('phylotree.txt', 'w', encoding='utf-8') as f:
             Phylo.draw_ascii(tree, file=f)
-    else:
-        Phylo.draw(tree, do_show=False)
+    elif out_format in ['png', 'pdf', 'svg']:
+        # todo: offset the labels to avoid overlap (use magic or idk)
+        _, ax = plt.subplots(figsize=(12, 8))
+        Phylo.draw(tree, do_show=False, axes=ax, branch_labels=lambda c: round(c.branch_length, 4))
         plt.savefig(f'phylotree.{out_format}')
+    else:
+        raise ValueError(f'Invalid output format: {out_format}')
 
 
 def build_phylotree(
         alignment_data: Optional[str] = None,
         aln_data_format: str = ALN_DATA_FORMAT,
+        constructor_method: str = 'upgma',
         out_format: str | list[str] = None
     ):
     '''
@@ -194,6 +213,8 @@ def build_phylotree(
     Args:
         alignment_data (str): MSA results
         aln_data_format (str): Format of the MSA results
+        constructor_method (str): Method to construct the phylogenetic tree
+            Accepted values: 'upgma', 'nj', 'parsimony', Default: 'upgma'
         out_format (str | list[str]): Format(s) of the phylogenetic tree
             Accepted values: 'png', 'pdf', 'svg', 'txt'. Default: all formats.
     '''
@@ -203,11 +224,18 @@ def build_phylotree(
         with open(MSA_OUT_FN, encoding='utf-8') as f:
             alignment_data = f.read()
     alignment_data = AlignIO.read(StringIO(alignment_data), aln_data_format)
-    calculator = DistanceCalculator("identity")
-    dm = calculator.get_distance(alignment_data)
-    constructor = DistanceTreeConstructor()
-    tree = constructor.nj(dm)
-    # todo: nj vs upgma ?
+
+    match constructor_method:
+        case 'upgma' | 'nj':
+            calculator = DistanceCalculator("identity")
+            dm = calculator.get_distance(alignment_data)
+            constructor = DistanceTreeConstructor()
+            tree = constructor.upgma(dm) if constructor_method == 'upgma' else constructor.nj(dm)
+        case 'parsimony':
+            constructor = ParsimonyTreeConstructor(NNITreeSearcher(ParsimonyScorer()))
+            tree = constructor.build_tree(alignment_data)
+        case _:
+            raise ValueError(f'Invalid constructor method: {constructor_method}')
 
     if isinstance(out_format, str):
         _save_phylotree(tree, out_format)
