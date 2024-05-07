@@ -1,5 +1,25 @@
-'''Build a phylogenetic tree for a given protein sequence identifier'''
+"""
+Filename: build_phylotree.py
 
+This script implements the phylogenetic pipeline. For a given protein sequence identifier
+(UniProt ID), BLAST search, Multiple Sequence Alignment (MSA) and finally phylogenetic tree
+construction are all performed consecutively.
+
+Authors: (todo)
+    - Mariana surname <email>
+    - Jakub Duda <up202311235@edu.fc.up.pt>
+    - Soul surname <email>
+
+Citations:
+    - Madeira F, Pearce M, Tivey ARN, et al. Search and sequence analysis tools services from
+    EMBL-EBI in 2022. Nucleic Acids Research. 2022 Jul;50(W1):W276-W279. DOI: 10.1093/nar/gkac240.
+    PMID: 35412617; PMCID: PMC9252731.
+
+Usage:
+    python build_phylotree.py <prot_seq_id>
+"""
+
+import re
 import sys
 import time
 from io import StringIO
@@ -15,22 +35,29 @@ UNIPROT_OUT_FN = "sequence.fasta"
 BLAST_OUT_FN = "sequences_to_analyse.fasta"
 MSA_OUT_FN = "alignment.txt"
 
+ALN_DATA_FORMAT = "nexus"
 
-def get_args():
+
+def get_uniprot_id() -> str:
     '''
-    Get command line arguments.
+    Validate and get the protein sequence identifier from the command line arguments.
 
     Returns:
-        dict: Dictionary containing command line arguments
+        str: Protein sequence identifier
 
     Raises:
         SystemExit: If the number of command line arguments is not equal to 2
+            or if the protein sequence identifier is invalid
     '''
     if len(sys.argv) != 2:
         print("Usage: python build_phylotree.py <prot_seq_id>")
         sys.exit(1)
-    # todo: validate prot_seq_id (or not maybe - too complicated)
-    return {'prot_seq_id': sys.argv[1]}
+    uniprot_id = sys.argv[1]
+    id_regex = r'^(?:[OPQ]\d[\dA-Z]{3}\d)|(?:[A-NR-Z]\d[A-Z][\dA-Z]{2}\d(?:[A-Z][A-Z\d]{2}\d)?)$'
+    if not re.match(id_regex, uniprot_id):
+        print("Invalid protein sequence identifier")
+        sys.exit(1)
+    return uniprot_id
 
 def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqIO.SeqRecord:
     '''
@@ -87,6 +114,7 @@ def run_blast_search(
 
 def perform_msa(
         sequences: Optional[list[SeqIO.SeqRecord]] = None,
+        aln_data_format: str = ALN_DATA_FORMAT,
         filename: str = MSA_OUT_FN
     ) -> str:
     '''
@@ -94,6 +122,7 @@ def perform_msa(
 
     Args:
         sequences (list[SeqRecord]): List of protein sequences to be aligned
+        aln_data_format (str): Format of the MSA results
         filename (str): Name of the file to save the MSA results to
 
     Returns:
@@ -102,7 +131,6 @@ def perform_msa(
     Raises:
         ValueError: If the MSA fails to be performed or an error occurs when retrieving the results
     '''
-    # todo: citation (https://europepmc.org/article/MED/35412617)
     if not sequences:
         with open(UNIPROT_OUT_FN, encoding="utf-8") as f:
             sequences = [next(SeqIO.parse(f, "fasta"))]
@@ -111,7 +139,7 @@ def perform_msa(
     url = 'https://www.ebi.ac.uk/Tools/services/rest/clustalo'
     form_data = {
         'email': 'up202311235@edu.fc.up.pt',
-        'outfmt': 'nexus',
+        'outfmt': aln_data_format,
         'sequence': '\n'.join([seq.format('fasta') for seq in sequences]),
         'stype': 'protein',
     }
@@ -128,23 +156,24 @@ def perform_msa(
         if response.text == 'FINISHED':
             break
         time.sleep(1)
-    response = requests.get(f'{url}/result/{job_id}/aln-nexus', timeout=100)
+    response = requests.get(f'{url}/result/{job_id}/aln-{aln_data_format}', timeout=100)
     if not response.ok:
         raise ValueError('Failed to get MSA results')
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(response.text)
 
-def build_phylotree(alignment_data: Optional[str] = None):
+def build_phylotree(alignment_data: Optional[str] = None, aln_data_format: str = ALN_DATA_FORMAT):
     '''
     Build a phylogenetic tree using the MSA results.
 
     Args:
         alignment_data (str): MSA results
+        aln_data_format (str): Format of the MSA results
     '''
     if not alignment_data:
         with open(MSA_OUT_FN, encoding='utf-8') as f:
             alignment_data = f.read()
-    alignment_data = AlignIO.read(StringIO(alignment_data), "nexus")
+    alignment_data = AlignIO.read(StringIO(alignment_data), aln_data_format)
     calculator = DistanceCalculator("identity")
     dm = calculator.get_distance(alignment_data)
     constructor = DistanceTreeConstructor()
@@ -157,8 +186,7 @@ def main():
     '''
     Main function.
     '''
-    args = get_args()
-    prot_seq_id = args['prot_seq_id']
+    prot_seq_id = get_uniprot_id()
 
     # Part 1
     get_protein_seq(prot_seq_id)
