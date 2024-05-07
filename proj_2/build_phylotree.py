@@ -26,6 +26,7 @@ from io import StringIO
 from typing import Optional
 
 import requests
+import matplotlib.pyplot as plt
 from Bio.Blast import NCBIWWW
 from Bio import AlignIO, SeqIO, SearchIO, Phylo
 from Bio.Phylo.TreeConstruction import DistanceCalculator, DistanceTreeConstructor
@@ -52,12 +53,14 @@ def get_uniprot_id() -> str:
     if len(sys.argv) != 2:
         print("Usage: python build_phylotree.py <prot_seq_id>")
         sys.exit(1)
+
     uniprot_id = sys.argv[1]
     id_regex = r'^(?:[OPQ]\d[\dA-Z]{3}\d)|(?:[A-NR-Z]\d[A-Z][\dA-Z]{2}\d(?:[A-Z][A-Z\d]{2}\d)?)$'
     if not re.match(id_regex, uniprot_id):
         print("Invalid protein sequence identifier")
         sys.exit(1)
     return uniprot_id
+
 
 def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqIO.SeqRecord:
     '''
@@ -77,9 +80,11 @@ def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqIO.S
     response = requests.get(url, timeout=100)
     if not response.ok:
         raise ValueError(f'Failed to fetch data for {prot_seq_id}')
+
     prot_seq = SeqIO.read(StringIO(response.text), "fasta")
     SeqIO.write(prot_seq, filename, "fasta")
     return prot_seq
+
 
 def run_blast_search(
         seq: Optional[SeqIO.SeqRecord] = None,
@@ -98,6 +103,7 @@ def run_blast_search(
     if not seq:
         with open(UNIPROT_OUT_FN, encoding="utf-8") as h:
             seq = next(SeqIO.parse(h, "fasta"))
+
     eq = 'NOT "Homo sapiens"[Organism] NOT "synthetic construct"[Organism]'
     with NCBIWWW.qblast("blastp", "nr", seq.seq, entrez_query=eq, hitlist_size=10) as result_handle:
         blast_results = SearchIO.parse(result_handle, "blast-xml")
@@ -111,6 +117,7 @@ def run_blast_search(
                     blast_records.append(fragment.hit)
         SeqIO.write(blast_records, filename, "fasta")
     return blast_records
+
 
 def perform_msa(
         sequences: Optional[list[SeqIO.SeqRecord]] = None,
@@ -136,6 +143,7 @@ def perform_msa(
             sequences = [next(SeqIO.parse(f, "fasta"))]
         with open(BLAST_OUT_FN, encoding="utf-8") as f:
             sequences.extend(SeqIO.parse(f, "fasta"))
+
     url = 'https://www.ebi.ac.uk/Tools/services/rest/clustalo'
     form_data = {
         'email': 'up202311235@edu.fc.up.pt',
@@ -147,6 +155,7 @@ def perform_msa(
     if not response.ok:
         print(response.text)
         raise ValueError('Failed to perform MSA')
+
     job_id = response.text
     job_url = f'{url}/status/{job_id}'
     while True:
@@ -156,20 +165,40 @@ def perform_msa(
         if response.text == 'FINISHED':
             break
         time.sleep(1)
+
     response = requests.get(f'{url}/result/{job_id}/aln-{aln_data_format}', timeout=100)
     if not response.ok:
         raise ValueError('Failed to get MSA results')
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(response.text)
 
-def build_phylotree(alignment_data: Optional[str] = None, aln_data_format: str = ALN_DATA_FORMAT):
+
+def _save_phylotree(tree: Phylo.BaseTree.Tree, out_format: str):
+    # todo: make sure the graphs look good
+    if out_format == 'txt':
+        with open('phylotree.txt', 'w', encoding='utf-8') as f:
+            Phylo.draw_ascii(tree, file=f)
+    else:
+        Phylo.draw(tree, do_show=False)
+        plt.savefig(f'phylotree.{out_format}')
+
+
+def build_phylotree(
+        alignment_data: Optional[str] = None,
+        aln_data_format: str = ALN_DATA_FORMAT,
+        out_format: str | list[str] = None
+    ):
     '''
     Build a phylogenetic tree using the MSA results.
 
     Args:
         alignment_data (str): MSA results
         aln_data_format (str): Format of the MSA results
+        out_format (str | list[str]): Format(s) of the phylogenetic tree
+            Accepted values: 'png', 'pdf', 'svg', 'txt'. Default: all formats.
     '''
+    if not out_format:
+        out_format = ['png', 'pdf', 'svg', 'txt']
     if not alignment_data:
         with open(MSA_OUT_FN, encoding='utf-8') as f:
             alignment_data = f.read()
@@ -178,9 +207,14 @@ def build_phylotree(alignment_data: Optional[str] = None, aln_data_format: str =
     dm = calculator.get_distance(alignment_data)
     constructor = DistanceTreeConstructor()
     tree = constructor.nj(dm)
-    Phylo.draw(tree)
-    # todo: different tree formats
-    # todo: maybe different labels
+    # todo: nj vs upgma ?
+
+    if isinstance(out_format, str):
+        _save_phylotree(tree, out_format)
+    elif isinstance(out_format, list):
+        for fmt in out_format:
+            _save_phylotree(tree, fmt)
+
 
 def main():
     '''
