@@ -28,6 +28,7 @@ from typing import Optional
 import requests
 import matplotlib.pyplot as plt
 from Bio.Blast import NCBIWWW
+from Bio.SeqIO import SeqRecord
 from Bio import AlignIO, SeqIO, SearchIO, Phylo
 from Bio.Phylo.TreeConstruction import (
     DistanceCalculator, DistanceTreeConstructor,
@@ -40,6 +41,7 @@ BLAST_OUT_FN = "sequences_to_analyse.fasta"
 MSA_OUT_FN = "alignment.txt"
 
 ALN_DATA_FORMAT = "nexus"
+BLAST_LIMIT = 10
 
 
 def get_uniprot_id() -> str:
@@ -65,7 +67,7 @@ def get_uniprot_id() -> str:
     return uniprot_id
 
 
-def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqIO.SeqRecord:
+def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqRecord:
     '''
     Fetch the protein sequence and save it to a file.
 
@@ -89,10 +91,24 @@ def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqIO.S
     return prot_seq
 
 
+def _read_seq_from_fasta(filename: str) -> SeqRecord:
+    '''
+    Read the protein sequence from a FASTA file.
+
+    Args:
+        filename (str): Name of the file containing the protein sequence
+
+    Returns:
+        list[SeqRecord]: List of protein sequences
+    '''
+    with open(filename, encoding="utf-8") as f:
+        return list(SeqIO.parse(f, "fasta"))
+
+
 def run_blast_search(
-        seq: Optional[SeqIO.SeqRecord] = None,
+        sequence: Optional[SeqRecord] = None,
         filename: str = BLAST_OUT_FN
-    ) -> list[SeqIO.SeqRecord]:
+    ) -> list[SeqRecord]:
     '''
     Run a BLAST search for the protein sequence.
 
@@ -103,12 +119,12 @@ def run_blast_search(
     Returns:
         list[SeqRecord]: List of protein sequences representing the BLAST search results
     '''
-    if not seq:
-        with open(UNIPROT_OUT_FN, encoding="utf-8") as h:
-            seq = next(SeqIO.parse(h, "fasta"))
+    if not sequence:
+        sequence = _read_seq_from_fasta(UNIPROT_OUT_FN)[0]
 
-    eq = 'NOT "Homo sapiens"[Organism] NOT "synthetic construct"[Organism]'
-    with NCBIWWW.qblast("blastp", "nr", seq.seq, entrez_query=eq, hitlist_size=10) as result_handle:
+    entrez_query = 'NOT "Homo sapiens"[Organism] NOT "synthetic construct"[Organism]'
+    with NCBIWWW.qblast("blastp", "nr", sequence.seq, entrez_query=entrez_query,
+                        hitlist_size=BLAST_LIMIT) as result_handle:
         blast_results = SearchIO.parse(result_handle, "blast-xml")
         blast_records = []
         for query_result in blast_results:
@@ -123,7 +139,7 @@ def run_blast_search(
 
 
 def perform_msa(
-        sequences: Optional[list[SeqIO.SeqRecord]] = None,
+        sequences: Optional[list[SeqRecord]] = None,
         aln_data_format: str = ALN_DATA_FORMAT,
         filename: str = MSA_OUT_FN
     ) -> str:
@@ -142,10 +158,7 @@ def perform_msa(
         ValueError: If the MSA fails to be performed or an error occurs when retrieving the results
     '''
     if not sequences:
-        with open(UNIPROT_OUT_FN, encoding="utf-8") as f:
-            sequences = [next(SeqIO.parse(f, "fasta"))]
-        with open(BLAST_OUT_FN, encoding="utf-8") as f:
-            sequences.extend(SeqIO.parse(f, "fasta"))
+        sequences = _read_seq_from_fasta(UNIPROT_OUT_FN) + _read_seq_from_fasta(BLAST_OUT_FN)
 
     url = 'https://www.ebi.ac.uk/Tools/services/rest/clustalo'
     form_data = {
@@ -156,7 +169,6 @@ def perform_msa(
     }
     response = requests.post(f'{url}/run', data=form_data, timeout=100)
     if not response.ok:
-        print(response.text)
         raise ValueError('Failed to perform MSA')
 
     job_id = response.text
@@ -177,7 +189,7 @@ def perform_msa(
         f.write(response.text)
 
 
-def _save_phylotree(tree: Phylo.BaseTree.Tree, out_format: str):
+def _save_phylotree(tree: Phylo.BaseTree.Tree, out_filename: str, out_format: str):
     '''
     Save the phylogenetic tree to a file.
 
@@ -190,13 +202,13 @@ def _save_phylotree(tree: Phylo.BaseTree.Tree, out_format: str):
         ValueError: If the output format is invalid
     '''
     if out_format == 'txt':
-        with open('phylotree.txt', 'w', encoding='utf-8') as f:
+        with open(f'{out_filename}.txt', 'w', encoding='utf-8') as f:
             Phylo.draw_ascii(tree, file=f)
     elif out_format in ['png', 'pdf', 'svg']:
         # todo: offset the labels to avoid overlap (use magic or idk)
         _, ax = plt.subplots(figsize=(12, 8))
         Phylo.draw(tree, do_show=False, axes=ax, branch_labels=lambda c: round(c.branch_length, 4))
-        plt.savefig(f'phylotree.{out_format}')
+        plt.savefig(f'{out_filename}.{out_format}')
     else:
         raise ValueError(f'Invalid output format: {out_format}')
 
@@ -205,6 +217,7 @@ def build_phylotree(
         alignment_data: Optional[str] = None,
         aln_data_format: str = ALN_DATA_FORMAT,
         constructor_method: str = 'upgma',
+        out_filename: str = 'phylotree',
         out_format: str | list[str] = None
     ):
     '''
@@ -238,28 +251,27 @@ def build_phylotree(
             raise ValueError(f'Invalid constructor method: {constructor_method}')
 
     if isinstance(out_format, str):
-        _save_phylotree(tree, out_format)
+        _save_phylotree(tree, out_filename, out_format)
     elif isinstance(out_format, list):
         for fmt in out_format:
-            _save_phylotree(tree, fmt)
+            _save_phylotree(tree, out_filename, fmt)
 
 
 def main():
     '''
     Main function.
     '''
+    # Step 1
     prot_seq_id = get_uniprot_id()
-
-    # Part 1
     get_protein_seq(prot_seq_id)
 
-    # Part 2
+    # Step 2
     run_blast_search()
 
-    # Part 3
+    # Step 3
     perform_msa()
 
-    # Part 4
+    # Step 4
     build_phylotree()
 
 
