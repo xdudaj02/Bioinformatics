@@ -25,9 +25,9 @@ class PWM:
         first_word = self.lst_of_words[0]
         if 'U' in first_word:
             self.bio_type = 'RNA'
-        elif set(first_word).issubset('ACGTU'):
+        elif set(first_word).issubset('ACGT'):
             self.bio_type = 'DNA'
-        elif set(first_word).issubset('ABCDEFGHIKLMNPQRSTVWXYZ'):
+        elif set(first_word).issubset('ACDEFGHIKLMNPQRSTVWY'):
             self.bio_type = 'Protein'
         else:
             raise ValueError('Unable to infer sequence type from motif words')
@@ -159,7 +159,7 @@ class PWM:
         '''Update the PWM matrix with a new sequence'''
         # todo: pseudocounts ?
         if len(seq) != self.word_length:
-            raise ValueError("Input sequence length doesn't match the PWM length")
+            raise ValueError('Trying to add a sequence of different length')
 
         # Add the new sequence to the list of sequences
         self.lst_of_words.append(seq)
