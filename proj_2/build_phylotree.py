@@ -7,7 +7,7 @@ construction are all performed consecutively.
 
 Authors:
     - Mariana Lourenço <up201906985@edu.fc.up.pt>
-    - Jakub Duda <up202311235@edu.fc.up.pt> 
+    - Jakub Duda <up202311235@edu.fc.up.pt>
     - Soulaimane Salehddine <up202312271@edu.fc.up.pt>
 
 Citations:
