@@ -273,10 +273,10 @@ def main():
     run_blast_search()
 
     # Step 3
-    # perform_msa()
+    perform_msa()
 
     # Step 4
-    # build_phylotree()
+    build_phylotree()
 
 
 if __name__ == "__main__":
