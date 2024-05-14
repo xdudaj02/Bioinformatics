@@ -5,10 +5,10 @@ This script implements the phylogenetic pipeline. For a given protein sequence i
 (UniProt ID), BLAST search, Multiple Sequence Alignment (MSA) and finally phylogenetic tree
 construction are all performed consecutively.
 
-Authors: (todo)
-    - Mariana surname <email>
+Authors:
+    - Mariana Lourenço <up201906985@edu.fc.up.pt>
     - Jakub Duda <up202311235@edu.fc.up.pt>
-    - Soul surname <email>
+    - Soulaimane Salehddine <up202312271@edu.fc.up.pt>
 
 Citations:
     - Madeira F, Pearce M, Tivey ARN, et al. Search and sequence analysis tools services from
