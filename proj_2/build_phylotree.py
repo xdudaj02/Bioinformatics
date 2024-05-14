@@ -41,7 +41,7 @@ BLAST_OUT_FN = "sequences_to_analyse.fasta"
 MSA_OUT_FN = "alignment.txt"
 
 ALN_DATA_FORMAT = "nexus"
-BLAST_LIMIT = 10 # should be over 10 to ensure that 10 distinct sequences are found
+BLAST_LIMIT = 20 # should be over 10 to ensure that 10 distinct sequences are found
 
 
 def get_uniprot_id() -> str:
@@ -104,6 +104,18 @@ def _read_seqs_from_fasta(filename: str) -> list[SeqRecord]:
     with open(filename, encoding="utf-8") as f:
         return list(SeqIO.parse(f, "fasta"))
 
+def _get_species_name_from_desc(description: str) -> str:
+    '''
+    Get the species name from the description of a protein sequence.
+
+    Args:
+        description (str): Description of the protein sequence
+
+    Returns:
+        str: Species name
+    '''
+    species_name = description.split('[', 1)[1].split(']', 1)[0]
+    return species_name
 
 def run_blast_search(
         sequence: Optional[SeqRecord] = None,
@@ -131,14 +143,21 @@ def run_blast_search(
     with NCBIWWW.qblast("blastp", "nr", sequence.seq, entrez_query=entrez_query,
                         hitlist_size=BLAST_LIMIT) as result_handle:
         blast_results = SearchIO.parse(result_handle, "blast-xml")
-        blast_records = []
-        for query_result in blast_results:
-            for hit in query_result.hits:
-                for fragment in hit.fragments:
-                    # todo: make sure to keep only one match for each organism
-                    #           (need to query for more than 10)
-                    blast_records.append(fragment.hit)
-        SeqIO.write(blast_records, filename, "fasta")
+        query_result = next(blast_results)
+
+    blast_records = []
+    seen_species = set(['Homo sapiens', 'unidentified'])
+    for hit in query_result.hits:
+        if len(blast_records) >= 10:
+            break
+        hit_seq = hit.fragments[0].hit.seq
+        for hit_id, hit_desc in zip(hit.id_all, hit.description_all):
+            species_name = _get_species_name_from_desc(hit_desc)
+            if species_name not in seen_species:
+                seen_species.add(species_name)
+                blast_records.append(SeqRecord(hit_seq, hit_id, description=hit_desc))
+                break
+    SeqIO.write(blast_records, filename, "fasta")
     return blast_records
 
 
