@@ -184,7 +184,6 @@ def perform_msa(
     response = requests.get(f'{url}/result/{job_id}/aln-{aln_data_format}', timeout=100)
     if not response.ok:
         raise ValueError('Failed to get MSA results')
-    # todo: replace the sequence ids with the organism names (maybe, not sure if allowed)
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(response.text)
 
@@ -205,7 +204,6 @@ def _save_phylotree(tree: Phylo.BaseTree.Tree, out_filename: str, out_format: st
         with open(f'{out_filename}.txt', 'w', encoding='utf-8') as f:
             Phylo.draw_ascii(tree, file=f)
     elif out_format in ['png', 'pdf', 'svg']:
-        # todo: offset the labels to avoid overlap (use magic or idk)
         _, ax = plt.subplots(figsize=(12, 8))
         Phylo.draw(tree, do_show=False, axes=ax, branch_labels=lambda c: round(c.branch_length, 4))
         plt.savefig(f'{out_filename}.{out_format}')
