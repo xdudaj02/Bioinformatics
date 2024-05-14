@@ -41,12 +41,12 @@ BLAST_OUT_FN = "sequences_to_analyse.fasta"
 MSA_OUT_FN = "alignment.txt"
 
 ALN_DATA_FORMAT = "nexus"
-BLAST_LIMIT = 10
+BLAST_LIMIT = 10 # should be over 10 to ensure that 10 distinct sequences are found
 
 
 def get_uniprot_id() -> str:
     '''
-    Validate and get the protein sequence identifier from the command line arguments.
+    Get the protein sequence identifier from the command line arguments. Validate the identifier.
 
     Returns:
         str: Protein sequence identifier
@@ -91,9 +91,9 @@ def get_protein_seq(prot_seq_id: str, filename: str = UNIPROT_OUT_FN) -> SeqReco
     return prot_seq
 
 
-def _read_seq_from_fasta(filename: str) -> SeqRecord:
+def _read_seqs_from_fasta(filename: str) -> list[SeqRecord]:
     '''
-    Read the protein sequence from a FASTA file.
+    Read protein sequences from a FASTA file.
 
     Args:
         filename (str): Name of the file containing the protein sequence
@@ -110,7 +110,8 @@ def run_blast_search(
         filename: str = BLAST_OUT_FN
     ) -> list[SeqRecord]:
     '''
-    Run a BLAST search for the protein sequence.
+    Run a BLAST search for the protein sequence and get the 10 best distinct matches
+    that are not human or synthetic constructs. Save the results to a file.
 
     Args:
         sequence (SeqRecord): Protein sequence
@@ -118,9 +119,13 @@ def run_blast_search(
 
     Returns:
         list[SeqRecord]: List of protein sequences representing the BLAST search results
+
+    Note:
+        Some results may be labelled as "Homo sapiens". The reason for inclusion of these sequences
+        is that they are found in multiple species and human is just one of them.
     '''
     if not sequence:
-        sequence = _read_seq_from_fasta(UNIPROT_OUT_FN)[0]
+        sequence = _read_seqs_from_fasta(UNIPROT_OUT_FN)[0]
 
     entrez_query = 'NOT "Homo sapiens"[Organism] NOT "synthetic construct"[Organism]'
     with NCBIWWW.qblast("blastp", "nr", sequence.seq, entrez_query=entrez_query,
@@ -130,7 +135,6 @@ def run_blast_search(
         for query_result in blast_results:
             for hit in query_result.hits:
                 for fragment in hit.fragments:
-                    # todo: (maybe) change id to non-human for mulit-id ones
                     # todo: make sure to keep only one match for each organism
                     #           (need to query for more than 10)
                     blast_records.append(fragment.hit)
@@ -144,7 +148,8 @@ def perform_msa(
         filename: str = MSA_OUT_FN
     ) -> str:
     '''
-    Perform Multiple Sequence Alignment (MSA) using the Clustal Omega algorithm.
+    Perform Multiple Sequence Alignment (MSA) using the Clustal Omega algorithm and save the
+    results to a file.
 
     Args:
         sequences (list[SeqRecord]): List of protein sequences to be aligned
@@ -158,7 +163,7 @@ def perform_msa(
         ValueError: If the MSA fails to be performed or an error occurs when retrieving the results
     '''
     if not sequences:
-        sequences = _read_seq_from_fasta(UNIPROT_OUT_FN) + _read_seq_from_fasta(BLAST_OUT_FN)
+        sequences = _read_seqs_from_fasta(UNIPROT_OUT_FN) + _read_seqs_from_fasta(BLAST_OUT_FN)
 
     url = 'https://www.ebi.ac.uk/Tools/services/rest/clustalo'
     form_data = {
@@ -219,7 +224,8 @@ def build_phylotree(
         out_format: str | list[str] = None
     ):
     '''
-    Build a phylogenetic tree using the MSA results.
+    Build a phylogenetic tree based on the MSA results using the specified constructor method.
+    Plot and save the tree in the specified format(s).
 
     Args:
         alignment_data (str): MSA results
@@ -267,10 +273,10 @@ def main():
     run_blast_search()
 
     # Step 3
-    perform_msa()
+    # perform_msa()
 
     # Step 4
-    build_phylotree()
+    # build_phylotree()
 
 
 if __name__ == "__main__":
