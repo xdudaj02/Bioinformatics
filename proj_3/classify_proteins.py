@@ -65,7 +65,7 @@ def fasta_to_dict(filename: str) -> dict[str, str]:
     '''Reads a FASTA file and returns a dictionary
 
     Args:
-        file (str): Path to the FASTA file
+        filename (str): Path to the FASTA file
 
     Returns:
         dict: A dictionary with the id as the key and the sequence as the value
@@ -89,6 +89,8 @@ def fasta_to_dict(filename: str) -> dict[str, str]:
         if not seq:
             raise ValueError('Empty sequence in FASTA file')
         fasta_dict[header] = seq
+    if not fasta_dict:
+        raise ValueError('Empty FASTA file')
     return fasta_dict
 
 
@@ -109,7 +111,7 @@ def generate_kmers(k: int, char_set: str) -> list[str]:
     return [''.join(p) for p in itertools.product(char_set, repeat=k)]
 
 
-def kmer_count(seq: str, k: int, kmers: list[str] = None) -> dict[str, int]:
+def kmer_count(seq: str, k: int, kmers: list[str]) -> dict[str, int]:
     '''Count the number of k-mers in a sequence
 
     Args:
@@ -145,9 +147,10 @@ def create_kmer_df(
     '''Populate a DataFrame with k-mer counts
 
     Args:
-        fasta_dict_a (dict): Dictionary of protein sequences (id: sequence) of first type
-        fasta_dict_b (dict): Dictionary of protein sequences (id: sequence) of second type
+        fasta_dict (dict): Dictionary with the protein sequences
+        class_name (str): The class name (of the protein family)
         k (int): Length of the k-mer
+        alphabet (str): The character set to use
 
     Returns:
         pd.DataFrame: A DataFrame with the k-mer counts
@@ -161,7 +164,7 @@ def create_kmer_df(
 
     kmer_cnts = {seq_id: kmer_count(seq, k, kmers) for seq_id, seq in fasta_dict.items()}
 
-    df = pd.DataFrame.from_dict(kmer_cnts, orient='index').fillna(0)
+    df = pd.DataFrame.from_dict(kmer_cnts, orient='index')
     df.loc[:, 'class'] = pd.Series(class_name, index=df.index, dtype='category')
     return df
 
@@ -206,10 +209,13 @@ def main():
     fasta_dict_a = fasta_to_dict(args.a)
     fasta_dict_b = fasta_to_dict(args.b)
 
+    if not set(fasta_dict_a.keys()).isdisjoint(fasta_dict_b.keys()):
+        raise ValueError('Duplicate entries in input files')
+
     df_a = create_kmer_df(fasta_dict_a, args.a, args.k)
     df_b = create_kmer_df(fasta_dict_b, args.b, args.k)
 
-    df = pd.concat([df_a, df_b], ignore_index=True)
+    df = pd.concat([df_a, df_b])
 
     results = get_classification_results(df)
     print(results)
