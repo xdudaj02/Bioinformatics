@@ -217,6 +217,11 @@ def main():
 
     df = pd.concat([df_a, df_b])
 
+    for column in df.columns:
+        print(f"Value counts for column {column}:")
+        print(df[column].value_counts())
+        print("\n" + "="*50 + "\n")
+
     results = get_classification_results(df)
     print(results)
 
